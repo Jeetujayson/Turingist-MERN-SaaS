@@ -4,18 +4,19 @@ function StockScreener() {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [limit, setLimit] = useState(10);
 
   const fetchNews = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const res = await fetch('/api/news');
+      const res = await fetch(`/api/news?limit=${limit}`);
 
       if (!res.ok) throw new Error('Network error');
 
       const data = await res.json();
-      setNews(data); // already 10 items
+      setNews(data);
     } catch (err) {
       console.error(err);
       setError('Unable to fetch latest news. Please try again.');
@@ -26,7 +27,7 @@ function StockScreener() {
 
   useEffect(() => {
     fetchNews();
-  }, []);
+  }, [limit]);
 
   const refreshNews = () => fetchNews();
 
@@ -70,7 +71,7 @@ function StockScreener() {
             animation: 'gradientMove 3s ease-in-out infinite'
           }}
         >
-          Stock News
+          AI Stock News Sentiment
         </h1>
         <p
           style={{
@@ -80,7 +81,7 @@ function StockScreener() {
             margin: '0 auto'
           }}
         >
-          Latest stock market news and updates from Economic Times
+          Latest stock market news with AI-powered sentiment analysis
         </p>
       </div>
 
@@ -107,25 +108,51 @@ function StockScreener() {
               {loading ? 'Loading...' : `${news.length} articles found`}
             </p>
           </div>
-          <button
-            onClick={refreshNews}
-            disabled={loading}
-            style={{
-              padding: '12px 24px',
-              borderRadius: '12px',
-              border: 'none',
-              background: loading
-                ? 'rgba(142, 142, 147, 0.3)'
-                : 'linear-gradient(135deg, #007aff, #5856d6)',
-              color: 'white',
-              fontSize: '0.9rem',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            {loading ? '🔄 Loading...' : '🔄 Refresh'}
-          </button>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {/* Limit Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ color: '#a1a1a6', fontSize: '0.9rem' }}>Articles:</label>
+              <select
+                value={limit}
+                onChange={(e) => setLimit(parseInt(e.target.value))}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(28, 28, 30, 0.8)',
+                  color: '#f5f5f7',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={15}>15</option>
+                <option value={20}>20</option>
+              </select>
+            </div>
+
+            <button
+              onClick={refreshNews}
+              disabled={loading}
+              style={{
+                padding: '12px 24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: loading
+                  ? 'rgba(142, 142, 147, 0.3)'
+                  : 'linear-gradient(135deg, #007aff, #5856d6)',
+                color: 'white',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {loading ? '🔄 Loading...' : '🔄 Refresh'}
+            </button>
+          </div>
         </div>
 
         {/* News List */}
@@ -198,15 +225,88 @@ function StockScreener() {
                   style={{
                     color: '#a1a1a6',
                     lineHeight: '1.6',
-                    fontSize: '1rem'
+                    fontSize: '1rem',
+                    marginBottom: '16px'
                   }}
                 >
                   {article.summary}
                 </p>
 
+                {/* Sentiment Score */}
+                {article.sentiment_score !== undefined && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginTop: '16px',
+                      paddingTop: '16px',
+                      borderTop: '1px solid rgba(255, 255, 255, 0.08)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div
+                          style={{
+                            fontSize: '2rem',
+                            fontWeight: '700',
+                            color: article.sentiment_score > 0 
+                              ? '#34c759' 
+                              : article.sentiment_score < 0 
+                              ? '#ff453a' 
+                              : '#8e8e93'
+                          }}
+                        >
+                          {article.sentiment_score > 0 ? '+' : ''}{article.sentiment_score}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '1.5rem',  // Same size as score
+                            fontWeight: '600',
+                            color: article.sentiment_score > 0 
+                              ? '#34c759'  // Same green as positive score
+                              : article.sentiment_score < 0 
+                              ? '#ff453a'  // Same red as negative score
+                              : '#8e8e93', // Same gray as neutral score
+                            marginTop: '4px'
+                          }}
+                        >
+                          {article.sentiment_score > 5 ? 'Very Bullish' :
+                          article.sentiment_score > 2 ? 'Bullish' :
+                          article.sentiment_score > 0 ? 'Slightly Positive' :
+                          article.sentiment_score === 0 ? 'Neutral' :
+                          article.sentiment_score > -3 ? 'Slightly Negative' :
+                          article.sentiment_score > -6 ? 'Bearish' : 'Very Bearish'}
+                        </div>
+
+                      </div>
+                      <div style={{ 
+                        padding: '6px 12px',
+                        background: 'rgba(0, 122, 255, 0.15)',
+                        color: '#007aff',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        border: '1px solid rgba(0, 122, 255, 0.2)'
+                      }}>
+                        🤖 AI Sentiment
+                      </div>
+
+                    </div>
+                    <div style={{ fontSize: '1.5rem' }}>
+                      {article.sentiment_score > 5 ? '🚀' : 
+                      article.sentiment_score < -5 ? '📉' : 
+                      article.sentiment_score > 0 ? '📈' : 
+                      article.sentiment_score < 0 ? '📊' : '😐'}
+                    </div>
+                  </div>
+                )}
+
+
                 <div
                   style={{
-                    marginTop: '16px',
                     paddingTop: '16px',
                     borderTop: '1px solid rgba(255, 255, 255, 0.08)',
                     display: 'flex',

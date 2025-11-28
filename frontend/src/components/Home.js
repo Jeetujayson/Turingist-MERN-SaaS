@@ -6,10 +6,10 @@ function Home() {
   const saasTools = [
     {
       id: 1,
-      name: "Stock Screener",
+      name: "AI Stock Screener",
       description: "Filter Profitable Stocks In Real Time",
       icon: "📈",
-      features: ["Real-time Data", "Based On Technical Analysis", "API Integration"],
+      features: ["Real-time Data", "AI Sentiment Analysis", "API Integration"],
       status: "Beta"
     },
     {
@@ -39,7 +39,8 @@ function Home() {
   ];
 
   const handleButtonClick = (tool) => {
-    if (tool.status === 'Beta' && tool.name === 'Stock Screener') {
+    if (tool.status === 'Beta' && tool.name === 'AI Stock Screener') {
+
       window.open('/stock-screener', '_blank');
     } else if (tool.status === 'Live') {
   window.open('/tic-tac-toe', '_blank');
