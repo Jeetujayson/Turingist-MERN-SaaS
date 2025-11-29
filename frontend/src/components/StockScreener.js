@@ -1,35 +1,58 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+
 
 function StockScreener() {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [limit, setLimit] = useState(10);
+  const [sortBy, setSortBy] = useState('latest');
 
-  const fetchNews = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchNews = useCallback(async () => {
+  try {
+    setLoading(true);
+    setError(null);
 
-      const res = await fetch(`/api/news?limit=${limit}`);
+    const res = await fetch(`/api/news?limit=${limit}`);
 
-      if (!res.ok) throw new Error('Network error');
+    if (!res.ok) throw new Error('Network error');
 
-      const data = await res.json();
-      setNews(data);
-    } catch (err) {
-      console.error(err);
-      setError('Unable to fetch latest news. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const data = await res.json();
+    setNews(data);
+    console.log('News data:', data[0]); // Log first article to see structure
 
-  useEffect(() => {
-    fetchNews();
-  }, [limit]);
+  } catch (err) {
+    console.error(err);
+    setError('Unable to fetch latest news. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+}, [limit]);
+
+useEffect(() => {
+  fetchNews();
+}, [fetchNews]);
+
 
   const refreshNews = () => fetchNews();
+
+  const sortNews = (newsArray, sortType) => {
+    return [...newsArray].sort((a, b) => {
+      if (sortType === 'bullish') {
+        if (a.sentiment_score !== b.sentiment_score) {
+          return b.sentiment_score - a.sentiment_score;
+        }
+        return new Date(b.timestamp || new Date()) - new Date(a.timestamp || new Date());
+      } else if (sortType === 'bearish') {
+        if (a.sentiment_score !== b.sentiment_score) {
+          return a.sentiment_score - b.sentiment_score;
+        }
+        return new Date(b.timestamp || new Date()) - new Date(a.timestamp || new Date());
+      } else {
+        return new Date(b.timestamp || new Date()) - new Date(a.timestamp || new Date());
+      }
+    });
+  };
 
   const getCategoryColor = (category) => {
     const colors = {
@@ -44,6 +67,17 @@ function StockScreener() {
       Commodities: '#ffcc02'
     };
     return colors[category] || '#a1a1a6';
+  };
+
+  const formatDateTime = (timestamp) => {
+    if (!timestamp) return 'Recently';
+    return new Date(timestamp).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   return (
@@ -110,6 +144,28 @@ function StockScreener() {
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {/* Sort Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ color: '#a1a1a6', fontSize: '0.9rem' }}>Sort by:</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(28, 28, 30, 0.8)',
+                  color: '#f5f5f7',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="latest">Latest First</option>
+                <option value="bullish">Bullish First</option>
+                <option value="bearish">Bearish First</option>
+              </select>
+            </div>
+
             {/* Limit Selector */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <label style={{ color: '#a1a1a6', fontSize: '0.9rem' }}>Articles:</label>
@@ -168,7 +224,7 @@ function StockScreener() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {news.map((article) => (
+            {sortNews(news, sortBy).map((article) => (
               <div
                 key={article.id}
                 onClick={() => window.open(article.url, '_blank')}
@@ -205,8 +261,9 @@ function StockScreener() {
                     {article.category}
                   </div>
                   <div style={{ color: '#a1a1a6', fontSize: '0.9rem' }}>
-                    {article.time}
+                    {formatDateTime(article.timestamp)}
                   </div>
+
                 </div>
 
                 <h3
@@ -261,13 +318,13 @@ function StockScreener() {
                         </div>
                         <div
                           style={{
-                            fontSize: '1.5rem',  // Same size as score
+                            fontSize: '1.5rem',
                             fontWeight: '600',
                             color: article.sentiment_score > 0 
-                              ? '#34c759'  // Same green as positive score
+                              ? '#34c759'
                               : article.sentiment_score < 0 
-                              ? '#ff453a'  // Same red as negative score
-                              : '#8e8e93', // Same gray as neutral score
+                              ? '#ff453a'
+                              : '#8e8e93',
                             marginTop: '4px'
                           }}
                         >
@@ -278,7 +335,6 @@ function StockScreener() {
                           article.sentiment_score > -3 ? 'Slightly Negative' :
                           article.sentiment_score > -6 ? 'Bearish' : 'Very Bearish'}
                         </div>
-
                       </div>
                       <div style={{ 
                         padding: '6px 12px',
@@ -293,7 +349,6 @@ function StockScreener() {
                       }}>
                         🤖 AI Sentiment
                       </div>
-
                     </div>
                     <div style={{ fontSize: '1.5rem' }}>
                       {article.sentiment_score > 5 ? '🚀' : 
@@ -303,7 +358,6 @@ function StockScreener() {
                     </div>
                   </div>
                 )}
-
 
                 <div
                   style={{

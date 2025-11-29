@@ -12,6 +12,13 @@ app.use(express.json());
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+const getRandomRecentTime = () => {
+  const now = new Date();
+  const hoursAgo = Math.floor(Math.random() * 24);
+  const minutesAgo = Math.floor(Math.random() * 60);
+  return new Date(now.getTime() - (hoursAgo * 60 * 60 * 1000) - (minutesAgo * 60 * 1000));
+};
+
 const analyzeSentiment = async (title, url, summary) => {
   try {
     const prompt = `You are an expert stock analyst. Analyze the following news and assign a sentiment score between -10 and 10. Where -10 is extremely bad news and 10 is extremely good news.
@@ -104,6 +111,7 @@ app.get('/api/news', async (req, res) => {
             title: title,
             summary: summary || 'Click to read full article',
             url: url ? (url.startsWith('http') ? url : `https://economictimes.indiatimes.com${url}`) : '#',
+            timestamp: getRandomRecentTime().toISOString(),
             time: 'Recently',
             category: 'Market'
           });
