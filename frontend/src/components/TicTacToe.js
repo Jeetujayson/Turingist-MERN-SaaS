@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Header from './Header';
 
 function TicTacToe() {
   const [board, setBoard] = useState(Array(9).fill(null));
@@ -45,20 +46,25 @@ function TicTacToe() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'center'
+      justifyContent: 'center',
+      position: 'relative'
     }}>
+      <Header />
+      
       <h1 style={{ 
-        fontSize: '3.5rem', 
-        fontWeight: '700', 
-        marginBottom: '16px',
-        background: 'linear-gradient(270deg, #007aff, #5856d6, #af52de, #ff2d92, #007aff)',
-        backgroundSize: '400% 400%',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        animation: 'gradientMove 3s ease-in-out infinite'
-      }}>
-        Tic Tac Toe
-      </h1>
+  fontSize: '3.5rem', 
+  fontWeight: '700', 
+  marginTop: '100px',
+  marginBottom: '16px',
+  background: 'linear-gradient(270deg, #007aff, #5856d6, #af52de, #ff2d92, #007aff)',
+  backgroundSize: '400% 400%',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  animation: 'gradientMove 3s ease-in-out infinite'
+}}>
+  Tic Tac Toe
+</h1>
+
 
       <div style={{
         background: 'rgba(28, 28, 30, 0.8)',

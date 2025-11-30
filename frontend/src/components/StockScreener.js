@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-
+import Header from './Header';
 
 function StockScreener() {
   const [news, setNews] = useState([]);
@@ -81,6 +81,8 @@ useEffect(() => {
   };
 
   return (
+  <>
+    <Header />
     <div
       style={{
         minHeight: '100vh',
@@ -91,7 +93,8 @@ useEffect(() => {
       }}
     >
       {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '60px', marginTop: '100px' }}>
+
         <h1
           style={{
             fontSize: '3.5rem',
@@ -263,7 +266,6 @@ useEffect(() => {
                   <div style={{ color: '#a1a1a6', fontSize: '0.9rem' }}>
                     {formatDateTime(article.timestamp)}
                   </div>
-
                 </div>
 
                 <h3
@@ -391,7 +393,9 @@ useEffect(() => {
         `}
       </style>
     </div>
-  );
+  </>
+);
+
 }
 
 export default StockScreener;
