@@ -124,11 +124,13 @@ useEffect(() => {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Controls */}
-        <div
+                <div
           style={{
             display: 'flex',
+            flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: window.innerWidth <= 768 ? 'stretch' : 'center',
+            gap: window.innerWidth <= 768 ? '16px' : '0',
             marginBottom: '32px',
             background: 'rgba(28, 28, 30, 0.8)',
             backdropFilter: 'blur(20px)',
@@ -137,6 +139,7 @@ useEffect(() => {
             border: '1px solid rgba(255, 255, 255, 0.08)'
           }}
         >
+
           <div>
             <h2 style={{ fontSize: '1.5rem', color: '#f5f5f7', margin: 0 }}>
               Latest News
@@ -146,7 +149,14 @@ useEffect(() => {
             </p>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ 
+  display: 'flex', 
+  alignItems: 'center', 
+  gap: window.innerWidth <= 768 ? '8px' : '16px',
+  flexWrap: 'wrap',
+  justifyContent: window.innerWidth <= 768 ? 'space-between' : 'flex-start'
+}}>
+
             {/* Sort Selector */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <label style={{ color: '#a1a1a6', fontSize: '0.9rem' }}>Sort by:</label>
