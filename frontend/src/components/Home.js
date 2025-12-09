@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import Header from './Header';
 
-function Home() {
+function Home({ user, onLogout, onShowAuth }) {
+
   const [hoveredTool, setHoveredTool] = useState(null);
 
   const saasTools = [
@@ -51,7 +52,8 @@ function Home() {
 
 return (
   <div className="app">
-    <Header />
+    <Header user={user} onLogout={onLogout} onShowAuth={onShowAuth} />
+
     
     {/* Header */}
     <header className="header">

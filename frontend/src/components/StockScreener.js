@@ -1,12 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Header from './Header';
 
-function StockScreener() {
+// Configurable limit - change this number anytime
+const FREE_REFRESH_LIMIT = 20;
+
+
+function StockScreener({ user, onLogout, onShowAuth }) {
+
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [limit, setLimit] = useState(10);
   const [sortBy, setSortBy] = useState('latest');
+  const [refreshCount, setRefreshCount] = useState(0);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
 
   const fetchNews = useCallback(async () => {
   try {
@@ -33,8 +41,36 @@ useEffect(() => {
   fetchNews();
 }, [fetchNews]);
 
+useEffect(() => {
+  if (!user) {
+    const count = parseInt(localStorage.getItem('refreshCount') || '0');
+    setRefreshCount(count);
+    if (count >= FREE_REFRESH_LIMIT) {
+      setShowLoginPrompt(true);
+    }
+  } else {
+    // Only hide the login prompt when user logs in, don't reset count
+    setShowLoginPrompt(false);
+  }
+}, [user]);
 
-  const refreshNews = () => fetchNews();
+
+
+  const refreshNews = () => {
+  if (!user) {
+    if (refreshCount >= FREE_REFRESH_LIMIT) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    
+    const newCount = refreshCount + 1;
+    setRefreshCount(newCount);
+    localStorage.setItem('refreshCount', newCount.toString());
+  }
+  
+  fetchNews();
+};
+
 
   const sortNews = (newsArray, sortType) => {
     return [...newsArray].sort((a, b) => {
@@ -82,7 +118,8 @@ useEffect(() => {
 
   return (
   <>
-    <Header />
+    <Header user={user} onLogout={onLogout} onShowAuth={onShowAuth} />
+
     <div
       style={{
         minHeight: '100vh',
@@ -146,6 +183,12 @@ useEffect(() => {
             </h2>
             <p style={{ color: '#a1a1a6', margin: '4px 0 0 0', fontSize: '0.9rem' }}>
               {loading ? 'Loading...' : `${news.length} articles found`}
+              {!user && (
+  <div style={{ color: '#ff9f0a', fontSize: '0.8rem', marginTop: '4px' }}>
+    Free refreshes: {refreshCount}/{FREE_REFRESH_LIMIT}
+  </div>
+)}
+
             </p>
           </div>
           
@@ -225,6 +268,100 @@ useEffect(() => {
         </div>
 
         {/* News List */}
+        {/* Login Prompt Overlay */}
+{showLoginPrompt && (
+  <div style={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.8)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000
+  }}>
+    <div style={{
+      background: 'rgba(28, 28, 30, 0.9)',
+      backdropFilter: 'blur(20px)',
+      borderRadius: '20px',
+      padding: '40px',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      textAlign: 'center',
+      maxWidth: '400px'
+    }}>
+      <h2 style={{ color: '#f5f5f7', marginBottom: '20px' }}>
+        Free Trial Limit Reached
+      </h2>
+      <p style={{ color: '#a1a1a6', marginBottom: '30px' }}>
+        You've used all {FREE_REFRESH_LIMIT} free refreshes. Register for unlimited access!
+      </p>
+
+      {/* <button
+        onClick={onShowAuth}
+        style={{
+          width: '100%',
+          padding: '12px',
+          borderRadius: '8px',
+          border: 'none',
+          background: 'linear-gradient(135deg, #007aff, #5856d6)',
+          color: 'white',
+          fontSize: '1rem',
+          fontWeight: '600',
+          cursor: 'pointer'
+        }}
+      >
+        Register Now
+      </button> */}
+
+      {/* DEVELOPMENT CODE DELETE IN PRODUCTION */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+        <button
+          onClick={onShowAuth}
+          style={{
+            flex: 1,
+            padding: '12px',
+            borderRadius: '8px',
+            border: 'none',
+            background: 'linear-gradient(135deg, #007aff, #5856d6)',
+            color: 'white',
+            fontSize: '1rem',
+            fontWeight: '600',
+            cursor: 'pointer'
+          }}
+        >
+          Register Now
+        </button>
+        
+
+        <button
+          onClick={() => {
+            localStorage.removeItem('refreshCount');
+            setRefreshCount(0);
+            setShowLoginPrompt(false);
+          }}
+          style={{
+            flex: 1,
+            padding: '12px',
+            borderRadius: '8px',
+            border: '1px solid #ff453a',
+            background: 'transparent',
+            color: '#ff453a',
+            fontSize: '1rem',
+            fontWeight: '600',
+            cursor: 'pointer'
+          }}
+        >
+          Reset Trial
+        </button>
+      </div>
+{/* DEVELOPMENT CODE DELETE IN PRODUCTION */}
+
+    </div>
+  </div>
+)}
+
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px' }}>
             <div style={{ fontSize: '2rem', marginBottom: '16px' }}>📰</div>

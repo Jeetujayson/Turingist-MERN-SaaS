@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const mongoose = require('mongoose');
+
 const cheerio = require('cheerio');
 
 const app = express();
@@ -9,6 +11,16 @@ const PORT = 5000;
 
 app.use(cors());
 app.use(express.json());
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+// Auth routes
+app.use('/api/auth', require('./routes/auth'));
+
+
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
@@ -27,6 +39,7 @@ Scoring rules:
 1. If the News headline has the stock by name in the Title, assign a score above 5 or below -5. 
 2. Only assign a score greater than 7 or less than -7 if the news is about a particular stock and is likely to move that particular stock price by more than 6% up or down within the next trading day.
 3. Avoid exaggerating sentiment & speculation, consider actual events that happened, not just positive or negative wording.
+4. If the news is neutral or unrelated to a particular stock, assign a score between -2 and 2.
 
 Output format (JSON only):
 {
@@ -138,6 +151,12 @@ app.get('/api/news', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch news from Economic Times' });
   }
 });
+
+// Test route
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Backend is working!' });
+});
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
