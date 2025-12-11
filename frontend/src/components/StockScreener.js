@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Header from './Header';
 
 // Configurable limit - change this number anytime
-const FREE_REFRESH_LIMIT = 20;
+const FREE_REFRESH_LIMIT = 3;
 
 
 function StockScreener({ user, onLogout, onShowAuth }) {
@@ -38,8 +38,23 @@ function StockScreener({ user, onLogout, onShowAuth }) {
 }, [limit]);
 
 useEffect(() => {
+  // Count initial page load as a refresh for non-logged users
+  if (!user) {
+    const count = parseInt(localStorage.getItem('refreshCount') || '0');
+    if (count >= FREE_REFRESH_LIMIT) {
+      setShowLoginPrompt(true);
+      return; // Don't fetch news if limit reached
+    }
+    
+    // Increment counter for initial load
+    const newCount = count + 1;
+    setRefreshCount(newCount);
+    localStorage.setItem('refreshCount', newCount.toString());
+  }
+  
   fetchNews();
-}, [fetchNews]);
+}, [fetchNews, user]);
+
 
 useEffect(() => {
   if (!user) {
