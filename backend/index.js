@@ -266,13 +266,10 @@ cron.schedule('*/30 * * * *', async () => {
 
     console.log(`🚨 Found ${highImpactNews.length} high impact news (score ≥ 4)`);
 
-    if (highImpactNews.length > 0) {
-      // Send alerts
-      for (const subscription of subscriptions) {
-        console.log(`📤 Sending alerts to chat ID: ${subscription.chatId}`);
-        
+      if (highImpactNews.length > 0) {
+        // Send alerts
         for (const newsItem of highImpactNews) {
-          // Check if already sent
+          // Check if already sent (ONCE per article)
           const alreadySent = await SentNews.findOne({ 
             title: newsItem.title, 
             url: newsItem.url 
@@ -283,27 +280,35 @@ cron.schedule('*/30 * * * *', async () => {
             continue;
           }
 
-          console.log(`🔍 Checking: Score ${newsItem.sentiment_score}, Threshold ${subscription.sentimentThreshold}, Send: ${Math.abs(newsItem.sentiment_score) >= subscription.sentimentThreshold}`);
+          console.log(`📰 Processing: "${newsItem.title}" (Score: ${newsItem.sentiment_score})`);
           
-          if (Math.abs(newsItem.sentiment_score) >= subscription.sentimentThreshold) {
-            console.log(`✅ Sending: "${newsItem.title}" (Score: ${newsItem.sentiment_score})`);
-            await sendNewsAlert(subscription.chatId, newsItem);
-            
-            // Mark as sent (only create once per news item)
+          // Send to ALL qualifying users
+          let sentToAnyUser = false;
+          for (const subscription of subscriptions) {
+            if (Math.abs(newsItem.sentiment_score) >= subscription.sentimentThreshold) {
+              console.log(`✅ Sending to chat ID ${subscription.chatId}: "${newsItem.title}"`);
+              await sendNewsAlert(subscription.chatId, newsItem);
+              sentToAnyUser = true;
+            }
+          }
+          
+          // Mark as sent ONLY if sent to at least one user
+          if (sentToAnyUser) {
             try {
               await SentNews.create({
                 title: newsItem.title,
                 url: newsItem.url
               });
+              console.log(`📝 Marked as sent: "${newsItem.title}"`);
             } catch (error) {
-              // Ignore duplicate key errors
               if (error.code !== 11000) {
                 console.error('Error saving sent news:', error);
               }
             }
           }
         }
-      }
+
+
     } else {
       console.log('📭 No high impact news to send');
     }
