@@ -33,15 +33,12 @@ const sendNewsAlert = async (chatId, newsItem) => {
   }
 
   const emoji = newsItem.sentiment_score > 0 ? '📈' : '📉';
-  const message = `${emoji} *High Impact News Alert*
+const message = `${emoji} *${newsItem.title}*
 
-*${newsItem.title}*
+📊 Score: ${newsItem.sentiment_score}
 
-📊 Sentiment Score: ${newsItem.sentiment_score}
-🏷️ Category: ${newsItem.category}
-⏰ ${new Date(newsItem.timestamp).toLocaleString()}
+[Read More](${newsItem.url})`;
 
-[Read Full Article](${newsItem.url})`;
 
 
   try {
