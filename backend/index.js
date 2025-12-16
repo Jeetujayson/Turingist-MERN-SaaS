@@ -1,4 +1,12 @@
+const cron = require('node-cron');
+const TelegramSubscription = require('./models/TelegramSubscription');
+const { sendNewsAlert } = require('./services/telegramBot');
+const SentNews = require('./models/SentNews');
+
+
 require('dotenv').config();
+const { initializeBot } = require('./services/telegramBot');
+
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
@@ -14,11 +22,18 @@ app.use(express.json());
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
+  .then(() => {
+    console.log('Connected to MongoDB');
+    // Initialize Telegram bot
+    initializeBot();
+  })
   .catch(err => console.error('MongoDB connection error:', err));
+
 
 // Auth routes
 app.use('/api/auth', require('./routes/auth'));
+
+app.use('/api/telegram', require('./routes/telegram'));
 
 
 
@@ -108,27 +123,28 @@ app.get('/api/news', async (req, res) => {
         }
         
         const summarySelectors = ['p', '.summary', '.story-summary', '.content'];
-        let summary = '';
-        
-        for (const sumSel of summarySelectors) {
-          const sumEl = $element.find(sumSel).first();
-          if (sumEl.length && sumEl.text().trim()) {
-            summary = sumEl.text().trim();
-            break;
-          }
-        }
-        
-        if (title && title.length > 10 && !news.find(n => n.title === title)) {
-          news.push({
-            id: news.length + 1,
-            title: title,
-            summary: summary || 'Click to read full article',
-            url: url ? (url.startsWith('http') ? url : `https://economictimes.indiatimes.com${url}`) : '#',
-            timestamp: getRandomRecentTime().toISOString(),
-            time: 'Recently',
-            category: 'Market'
-          });
-        }
+let summary = '';
+
+for (const sumSel of summarySelectors) {
+  const sumEl = $element.find(sumSel).first();
+  if (sumEl.length && sumEl.text().trim()) {
+    summary = sumEl.text().trim();
+    break;
+  }
+}
+
+if (title && title.length > 10 && !news.find(n => n.title === title)) {
+  news.push({
+    id: news.length + 1,
+    title: title,
+    summary: summary || 'Click to read full article',
+    url: url ? (url.startsWith('http') ? url : `https://economictimes.indiatimes.com${url}`) : '#',
+    timestamp: new Date(Date.now() - (news.length * 60000)).toISOString(),
+    category: 'Market'
+  });
+}
+
+
       });
       
       if (news.length >= limit) break;
@@ -156,6 +172,146 @@ app.get('/api/news', async (req, res) => {
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Backend is working!' });
 });
+
+// Cron job - every 30 minutes
+cron.schedule('*/30 * * * *', async () => {
+
+
+  try {
+    console.log('🔄 Running Telegram alert cron job...');
+    
+    // Get all active subscriptions first
+    const subscriptions = await TelegramSubscription.find({ isActive: true });
+    console.log(`📱 Found ${subscriptions.length} active subscriptions`);
+    
+    if (subscriptions.length === 0) {
+      console.log('❌ No active subscriptions found');
+      return;
+    }
+
+    // Fetch latest news
+    const response = await axios.get('https://economictimes.indiatimes.com/markets/stocks/news', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+
+    const $ = cheerio.load(response.data);
+    const news = [];
+
+    const selectors = ['.eachStory', '.story-box', '.contentSec'];
+
+    for (const selector of selectors) {
+      $(selector).slice(0, 5).each((index, element) => {
+        const $element = $(element);
+        
+        const titleSelectors = ['h3 a', 'h4 a', 'h2 a', '.story-title a', 'a[title]'];
+        let title = '';
+        let url = '';
+        
+        for (const titleSel of titleSelectors) {
+          const titleEl = $element.find(titleSel).first();
+          if (titleEl.length && titleEl.text().trim()) {
+            title = titleEl.text().trim();
+            url = titleEl.attr('href') || '';
+            break;
+          }
+        }
+        
+        const summarySelectors = ['p', '.summary', '.story-summary', '.content'];
+        let summary = '';
+
+        for (const sumSel of summarySelectors) {
+          const sumEl = $element.find(sumSel).first();
+          if (sumEl.length && sumEl.text().trim()) {
+            summary = sumEl.text().trim();
+            break;
+          }
+        }
+        
+        if (title && title.length > 10 && !news.find(n => n.title === title)) {
+          news.push({
+            id: news.length + 1,
+            title: title,
+            summary: summary || 'Click to read full article',
+            url: url ? (url.startsWith('http') ? url : `https://economictimes.indiatimes.com${url}`) : '#',
+            timestamp: new Date(Date.now() - (news.length * 60000)).toISOString(),
+
+            category: 'Market'
+          });
+        }
+      });
+      
+      if (news.length >= 5) break;
+    }
+
+    console.log(`📰 Found ${news.length} news articles`);
+
+    // Add sentiment analysis
+    const newsWithSentiment = await Promise.all(
+      news.map(async (article) => {
+        const sentiment = await analyzeSentiment(article.title, article.url, article.summary);
+        console.log(`📊 "${article.title}" - Score: ${sentiment}`);
+        return {
+          ...article,
+          sentiment_score: sentiment
+        };
+      })
+    );
+
+    // Filter high impact news (changed to ±4)
+    const highImpactNews = newsWithSentiment.filter(item => 
+      Math.abs(item.sentiment_score) >= 4
+    );
+
+    console.log(`🚨 Found ${highImpactNews.length} high impact news (score ≥ 4)`);
+
+    if (highImpactNews.length > 0) {
+      // Send alerts
+      for (const subscription of subscriptions) {
+        console.log(`📤 Sending alerts to chat ID: ${subscription.chatId}`);
+        
+        for (const newsItem of highImpactNews) {
+          // Check if already sent
+          const alreadySent = await SentNews.findOne({ 
+            title: newsItem.title, 
+            url: newsItem.url 
+          });
+          
+          if (alreadySent) {
+            console.log(`⏭️ Skipping already sent: "${newsItem.title}"`);
+            continue;
+          }
+
+          console.log(`🔍 Checking: Score ${newsItem.sentiment_score}, Threshold ${subscription.sentimentThreshold}, Send: ${Math.abs(newsItem.sentiment_score) >= subscription.sentimentThreshold}`);
+          
+          if (Math.abs(newsItem.sentiment_score) >= subscription.sentimentThreshold) {
+            console.log(`✅ Sending: "${newsItem.title}" (Score: ${newsItem.sentiment_score})`);
+            await sendNewsAlert(subscription.chatId, newsItem);
+            
+            // Mark as sent (only create once per news item)
+            try {
+              await SentNews.create({
+                title: newsItem.title,
+                url: newsItem.url
+              });
+            } catch (error) {
+              // Ignore duplicate key errors
+              if (error.code !== 11000) {
+                console.error('Error saving sent news:', error);
+              }
+            }
+          }
+        }
+      }
+    } else {
+      console.log('📭 No high impact news to send');
+    }
+  } catch (error) {
+    console.error('❌ Cron job error:', error);
+  }
+});
+
 
 
 app.listen(PORT, () => {

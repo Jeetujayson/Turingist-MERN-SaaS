@@ -14,6 +14,10 @@ function StockScreener({ user, onLogout, onShowAuth }) {
   const [sortBy, setSortBy] = useState('latest');
   const [refreshCount, setRefreshCount] = useState(0);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showTelegramModal, setShowTelegramModal] = useState(false);
+  const [chatId, setChatId] = useState('');
+  const [sentimentThreshold, setSentimentThreshold] = useState(8);
+
 
 
   const fetchNews = useCallback(async () => {
@@ -279,6 +283,31 @@ useEffect(() => {
             >
               {loading ? '🔄 Loading...' : '🔄 Refresh'}
             </button>
+
+                        {/* Telegram Alert Button - Only for logged in users */}
+            {user && (
+              <button
+                onClick={() => setShowTelegramModal(true)}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #0088cc, #229ed9)',
+                  color: 'white',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                📱 Get Telegram Alerts
+              </button>
+            )}
+
+
           </div>
         </div>
 
@@ -376,6 +405,156 @@ useEffect(() => {
     </div>
   </div>
 )}
+
+        {/* Telegram Modal */}
+        {showTelegramModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              background: 'rgba(28, 28, 30, 0.9)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '20px',
+              padding: '40px',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              maxWidth: '500px',
+              width: '90%'
+            }}>
+              <h2 style={{ color: '#f5f5f7', marginBottom: '20px', textAlign: 'center' }}>
+                📱 Get Telegram News Alerts
+              </h2>
+              
+              <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(0, 136, 204, 0.1)', borderRadius: '12px', border: '1px solid rgba(0, 136, 204, 0.3)' }}>
+                <p style={{ color: '#0088cc', fontSize: '0.9rem', margin: 0 }}>
+                  <strong>Step 1:</strong> Message our bot on Telegram: <strong>@turingist_stock_news_bot</strong>
+                </p>
+                <p style={{ color: '#0088cc', fontSize: '0.9rem', margin: '8px 0 0 0' }}>
+                  <strong>Step 2:</strong> Send /start to get your Chat ID
+                </p>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ color: '#f5f5f7', fontSize: '0.9rem', display: 'block', marginBottom: '8px' }}>
+                  Your Chat ID:
+                </label>
+                <input
+                  type="text"
+                  value={chatId}
+                  onChange={(e) => setChatId(e.target.value)}
+                  placeholder="Enter your Chat ID from the bot"
+
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    background: 'rgba(28, 28, 30, 0.8)',
+                    color: '#f5f5f7',
+                    fontSize: '0.9rem'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '30px' }}>
+                <label style={{ color: '#f5f5f7', fontSize: '0.9rem', display: 'block', marginBottom: '8px' }}>
+                  Alert Threshold:
+                </label>
+                <select
+                    value={sentimentThreshold}
+                    onChange={(e) => setSentimentThreshold(parseInt(e.target.value))}
+                    style={{
+
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    background: 'rgba(28, 28, 30, 0.8)',
+                    color: '#f5f5f7',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  <option value={8}>High Impact (Score ≥ 8 or ≤ -8)</option>
+                  <option value={6}>Medium Impact (Score ≥ 6 or ≤ -6)</option>
+                  <option value={4}>Low Impact (Score ≥ 4 or ≤ -4)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => setShowTelegramModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    background: 'transparent',
+                    color: '#a1a1a6',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+  try {
+    const response = await fetch('/api/telegram/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chatId,
+        sentimentThreshold
+      })
+    });
+
+    const data = await response.json();
+    
+    if (response.ok) {
+      alert('✅ Successfully subscribed to Telegram alerts!');
+      setChatId('');
+      setSentimentThreshold(8);
+    } else {
+      alert('❌ ' + data.error);
+    }
+  } catch (error) {
+    alert('❌ Failed to subscribe. Please try again.');
+  }
+  
+  setShowTelegramModal(false);
+}}
+
+                  disabled={!chatId}
+
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: chatId ? 'linear-gradient(135deg, #0088cc, #229ed9)' : 'rgba(142, 142, 147, 0.3)',
+                    color: 'white',
+                    fontSize: '0.9rem',
+                    cursor: chatId ? 'pointer' : 'not-allowed'
+                  }}
+
+                >
+                  Subscribe to Alerts
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px' }}>
