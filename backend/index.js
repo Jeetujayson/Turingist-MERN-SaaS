@@ -305,9 +305,9 @@ cron.schedule('*/30 * * * *', async () => {
     if (highImpactNews.length > 0) {
       for (const newsItem of highImpactNews) {
         const alreadySent = await SentNews.findOne({ 
-          title: newsItem.title, 
-          url: newsItem.url 
-        });
+  url: newsItem.url 
+});
+
         
         if (alreadySent) {
           console.log(`⏭️ Skipping already sent: "${newsItem.title}"`);
@@ -331,6 +331,7 @@ cron.schedule('*/30 * * * *', async () => {
               title: newsItem.title,
               url: newsItem.url
             });
+            
             console.log(`📝 Marked as sent: "${newsItem.title}"`);
           } catch (error) {
             if (error.code !== 11000) {
