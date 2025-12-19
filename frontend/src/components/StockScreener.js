@@ -712,8 +712,9 @@ useEffect(() => {
                   }}
                 >
                   <div style={{ color: '#007aff', fontSize: '0.9rem', fontWeight: '500' }}>
-                    📰 Economic Times
-                  </div>
+  📰 {article.category}
+</div>
+
                   <div style={{ color: '#007aff', fontSize: '0.9rem' }}>
                     Read more →
                   </div>
